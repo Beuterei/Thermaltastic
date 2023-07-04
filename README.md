@@ -75,8 +75,8 @@ This method sets the times (in microseconds) for the paper to advance one vertic
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().parse(dotPrintTime);`
-- `z.number().int().nonnegative().parse(dotFeedTime);`
+-   `z.number().int().nonnegative().parse(dotPrintTime);`
+-   `z.number().int().nonnegative().parse(dotFeedTime);`
 
 #### Example
 
@@ -110,7 +110,7 @@ Initializes the printer and set default values. Needs to be called before perfor
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().parse(firmware);`
+-   `z.number().int().nonnegative().parse(firmware);`
 
 #### Example
 
@@ -138,7 +138,6 @@ Resets all text formatting back to the defaults.
 await printer.setDefaults();
 ```
 
-
 ### `test()`
 
 Prints a test.
@@ -165,7 +164,7 @@ Sets the printing height of the barcode.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().parse(barcodeHeight);`
+-   `z.number().int().nonnegative().parse(barcodeHeight);`
 
 #### Example
 
@@ -179,7 +178,7 @@ Prints a barcode.
 
 #### Parameter constrains:
 
-- `z.string().max(255).parse(text);`
+-   `z.string().max(255).parse(text);`
 
 #### Example
 
@@ -333,7 +332,7 @@ Feeds lines of paper.
 
 #### Parameter constrains:
 
-- `z.number().int().min(1).parse(lines);`
+-   `z.number().int().min(1).parse(lines);`
 
 #### Example
 
@@ -347,7 +346,7 @@ Feeds rows of paper.
 
 #### Parameter constrains:
 
-- `z.number().int().min(1).parse(rows);`
+-   `z.number().int().min(1).parse(rows);`
 
 #### Example
 
@@ -381,8 +380,8 @@ Sets the printer density.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().max(31).parse(density);`
-- `z.number().int().nonnegative().max(7).parse(breakTime);`
+-   `z.number().int().nonnegative().max(31).parse(density);`
+-   `z.number().int().nonnegative().max(7).parse(breakTime);`
 
 #### Example
 
@@ -418,9 +417,9 @@ Prints a bitmap.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().max(384).parse(width);`
-- `z.number().int().min(1).parse(height);`
-- `z.array(z.number().int().nonnegative().max(255)).parse(bitmap);`
+-   `z.number().int().nonnegative().max(384).parse(width);`
+-   `z.number().int().min(1).parse(height);`
+-   `z.array(z.number().int().nonnegative().max(255)).parse(bitmap);`
 
 #### Example
 
@@ -464,7 +463,7 @@ Put the printer into a low-energy state after the given number of seconds.
 
 #### Parameter constrains:
 
-- `z.number().int().min(1).parse(seconds);`
+-   `z.number().int().min(1).parse(seconds);`
 
 #### Example
 
@@ -488,7 +487,7 @@ Set maximum chunk height for bitmap printing.
 
 #### Parameter constrains:
 
-- `z.number().int().min(1).parse(value);`
+-   `z.number().int().min(1).parse(value);`
 
 #### Example
 
@@ -502,7 +501,7 @@ Set maximum chunk height for bitmap printing. May only work in recent firmware.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().max(15).parse(value);`
+-   `z.number().int().nonnegative().max(15).parse(value);`
 
 #### Example
 
@@ -516,7 +515,7 @@ Select alternate characters for upper ASCII. May only work in recent firmware.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().max(47).parse(value);`
+-   `z.number().int().nonnegative().max(47).parse(value);`
 
 #### Example
 
@@ -550,7 +549,7 @@ Set character spacing. May only work in recent firmware.
 
 #### Parameter constrains:
 
-- `z.number().int().nonnegative().parse(spacing);`
+-   `z.number().int().nonnegative().parse(spacing);`
 
 #### Example
 
