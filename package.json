@@ -1,6 +1,6 @@
 {
   "name": "@beuluis/thermal-mqttastic",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Wrapper for my adafruit thermal printer api",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -63,7 +63,6 @@
   },
   "dependencies": {
     "async-mqtt": "2.6.3",
-    "qrcode": "1.5.3",
     "zod": "3.21.4"
   }
 }
