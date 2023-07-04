@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+#npm run test:cov
+npx hook-cli checkPackageVersion
+npx hook-cli checkForFileChanged CHANGELOG.md
+npx hook-cli checkForVulnerabilities
+npx hook-cli updateReminder -n
