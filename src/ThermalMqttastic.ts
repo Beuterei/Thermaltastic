@@ -797,68 +797,68 @@ export class ThermalMqttastic {
     }
 
     // Since mqtt is the most overhead in our chain we allow up to for bytes to be send at once. Every bulk function relaying on writeBytes should try to always fill up all 4
-    // public async printBitmap(width: number, height: number, bitmap: number[]) {
-    //     this.mayLog('printBitmap called');
+    public async printBitmap(width: number, height: number, bitmap: number[]) {
+        this.mayLog('printBitmap called');
 
-    //     // Parameter validation
-    //     z.number().int().nonnegative().max(384).parse(width);
-    //     z.number().int().min(1).parse(height);
-    //     z.array(z.number().int().nonnegative().max(255)).parse(bitmap);
+        // Parameter validation
+        z.number().int().nonnegative().max(384).parse(width);
+        z.number().int().min(1).parse(height);
+        z.array(z.number().int().nonnegative().max(255)).parse(bitmap);
 
-    //     // eslint-disable-next-line unicorn/consistent-function-scoping
-    //     const sendPayload = async ([first, ...rest]: number[]) => {
-    //         await this.timeoutWait();
-    //         await this.write(first, ...rest);
-    //     };
+        // eslint-disable-next-line unicorn/consistent-function-scoping
+        const sendPayload = async ([first, ...rest]: number[]) => {
+            await this.timeoutWait();
+            await this.write(first, ...rest);
+        };
 
-    //     let chunkHeight;
-    //     const rowBytes = Math.trunc(Math.ceil((width + 7) / 8)); // Round up to next byte boundary
-    //     const rowBytesClipped = rowBytes >= 48 ? 48 : rowBytes; // 384 pixels max width
-    //     let chunkHeightLimit = Math.trunc(256 / rowBytesClipped);
-    //     let rowStart = 0;
+        let chunkHeight;
+        const rowBytes = Math.floor((width + 7) / 8); // Round up to next byte boundary
+        const rowBytesClipped = rowBytes >= 48 ? 48 : rowBytes; // 384 pixels max width
+        let chunkHeightLimit = Math.floor(256 / rowBytesClipped);
+        let rowStart = 0;
 
-    //     if (chunkHeightLimit > this.maxChunkHeight) {
-    //         chunkHeightLimit = this.maxChunkHeight;
-    //     } else if (chunkHeightLimit < 1) {
-    //         chunkHeightLimit = 1;
-    //     }
+        if (chunkHeightLimit > this.maxChunkHeight) {
+            chunkHeightLimit = this.maxChunkHeight;
+        } else if (chunkHeightLimit < 1) {
+            chunkHeightLimit = 1;
+        }
 
-    //     for (let index = 0; rowStart < height; rowStart += chunkHeightLimit) {
-    //         // Issue up to chunkHeightLimit rows at a time:
-    //         chunkHeight = height - rowStart;
-    //         if (chunkHeight > chunkHeightLimit) chunkHeight = chunkHeightLimit;
+        for (let index = 0; rowStart < height; rowStart += chunkHeightLimit) {
+            // Issue up to chunkHeightLimit rows at a time:
+            chunkHeight = height - rowStart;
+            if (chunkHeight > chunkHeightLimit) chunkHeight = chunkHeightLimit;
 
-    //         await this.writeBytes(AsciiCode.DC2, C('*'), chunkHeight, rowBytesClipped);
+            await this.writeBytes(AsciiCode.DC2, C('*'), chunkHeight, rowBytesClipped);
 
-    //         for (let y = 0; y < chunkHeight; y++) {
-    //             let payload: number[] = [];
+            for (let y = 0; y < chunkHeight; y++) {
+                let payload: number[] = [];
 
-    //             for (let x = 0; x < rowBytesClipped; x++, index++) {
-    //                 payload.push(bitmap[index]);
+                for (let x = 0; x < rowBytesClipped; x++, index++) {
+                    payload.push(bitmap[index]);
 
-    //                 if (payload.length === 4) {
-    //                     await sendPayload(payload);
+                    if (payload.length === 4) {
+                        await sendPayload(payload);
 
-    //                     payload = [];
-    //                 }
-    //             }
+                        payload = [];
+                    }
+                }
 
-    //             // Check if payload has remaining elements
-    //             if (payload.length > 0) {
-    //                 await sendPayload(payload);
-    //             }
+                // Check if payload has remaining elements
+                if (payload.length > 0) {
+                    await sendPayload(payload);
+                }
 
-    //             index += rowBytes - rowBytesClipped;
-    //         }
+                index += rowBytes - rowBytesClipped;
+            }
 
-    //         this.timeoutSet(chunkHeight * this.dotPrintTime);
-    //     }
+            this.timeoutSet(chunkHeight * this.dotPrintTime);
+        }
 
-    //     this.prevByte = C('\n');
-    //     this.mayTable({
-    //         prevByte: this.prevByte,
-    //     });
-    // }
+        this.prevByte = C('\n');
+        this.mayTable({
+            prevByte: this.prevByte,
+        });
+    }
 
     // Take the printer offline. Print commands sent after this will be
     // ignored until 'online' is called.
