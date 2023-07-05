@@ -46,7 +46,7 @@ npm i @beuluis/thermal-mqttastic@next
 
 ## Usage
 
-> :warning: **You need the corresponding arduino MQTT client also listening**: See [WIP](https://example.com) for more details.
+> :warning: **You need the corresponding arduino MQTT client also listening**: See [ThermalMqttasticPrinter](https://registry.platformio.org/libraries/beuluis/ThermalMqttasticPrinter) for more details.
 
 ```typescript
 const printer = new ThermalMqttastic({
