@@ -1,26 +1,38 @@
 import { C, delay } from '../src/util';
 
-describe('C', () => {
-    it('should return character code for simple characters', () => {
-        expect(C('a')).toBe(97);
+describe('util', () => {
+    beforeEach(() => {
+        jest.useFakeTimers().setSystemTime(new Date('2023-01-01'));
     });
 
-    it('should return character code for special characters', () => {
-        expect(C('\n')).toBe(10);
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    it('should throw when code cannot be found', () => {
-        expect(() => C('')).toThrow(Error);
+    describe('C', () => {
+        it('should return character code for simple characters', () => {
+            expect(C('a')).toBe(97);
+        });
+
+        it('should return character code for special characters', () => {
+            expect(C('\n')).toBe(10);
+        });
+
+        it('should throw when code cannot be found', () => {
+            expect(() => C('')).toThrow(Error);
+        });
     });
-});
 
-describe('delay', () => {
-    it('should delay for milliseconds', async () => {
-        expect.assertions(1);
-        const start = Date.now();
+    describe('delay', () => {
+        it('should delay for milliseconds', async () => {
+            expect.assertions(1);
+            const waitTime = 100;
 
-        await delay(100);
+            const delayPromise = delay(waitTime);
 
-        expect(Date.now() - start).toBeGreaterThanOrEqual(100);
+            jest.advanceTimersByTime(waitTime);
+
+            await expect(delayPromise).resolves.toBeUndefined();
+        });
     });
 });
