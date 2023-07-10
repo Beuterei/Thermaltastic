@@ -9,6 +9,9 @@
   <h3 align="center">ThermalMqttastic</h3>
 
   <p align="center">
+    <img align="center" src="./images/print.jpg" alt="drawing" width="170"/>
+    <br />
+    <br />
     Control a Adafruit thermal printer over mqtt. This library is very WIP.
     <br />
     <br />
@@ -46,7 +49,9 @@ npm i @beuluis/thermal-mqttastic@next
 
 ## Usage
 
-> :warning: **You need the corresponding arduino MQTT client also listening**: See [WIP](https://example.com) for more details.
+> :warning: **You need the corresponding arduino MQTT client also listening**: See [ThermalMqttasticPrinter](https://registry.platformio.org/libraries/beuluis/ThermalMqttasticPrinter) for more details.
+
+You also need a MQTT broker. An example would be [eclipse-mosquitto](https://hub.docker.com/_/eclipse-mosquitto).
 
 ```typescript
 const printer = new ThermalMqttastic({
@@ -409,7 +414,7 @@ Turn off underline.
 await printer.underlineOff();
 ```
 
-### `printBitmap(width: number, height: number, bitmap: number[])`
+### `printBitmap(width: number, height: number, bitmap: Uint8Array)`
 
 > :warning: **WIP**
 
@@ -419,12 +424,11 @@ Prints a bitmap.
 
 -   `z.number().int().nonnegative().max(384).parse(width);`
 -   `z.number().int().min(1).parse(height);`
--   `z.array(z.number().int().nonnegative().max(255)).parse(bitmap);`
 
 #### Example
 
 ```typescript
-await printer.printBitmap(2, 2, [0, 255, 255, 0]);
+await printer.printBitmap(2, 2, new Uint8Array([0, 255, 255, 0]));
 ```
 
 ### `offline()`

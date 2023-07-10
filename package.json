@@ -1,6 +1,6 @@
 {
   "name": "@beuluis/thermal-mqttastic",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Wrapper for my adafruit thermal printer api",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
