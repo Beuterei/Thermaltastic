@@ -1,9 +1,10 @@
 # Changelog
 
-## 2023-07-04 - 0.0.3
+## 2023-07-10 - 0.0.3
 
--   Add arduino lib link to readme
+-   Update readme
 -   Fix up printBitmap method
+-   Add pic
 
 ## 2023-07-03 - 0.0.2
 

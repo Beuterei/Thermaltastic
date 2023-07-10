@@ -45,7 +45,7 @@ describe('ThermalMqttastic', () => {
 
     describe('constructor', () => {
         it('should set additionalStackTimeout default', () => {
-            expect(thermalMqttastic['additionalStackTimeout']).toBe(20);
+            expect(thermalMqttastic['additionalStackTimeout']).toBe(5);
         });
 
         it('should set additionalStackTimeout', () => {
@@ -105,11 +105,11 @@ describe('ThermalMqttastic', () => {
 
         describe('getByteTime', () => {
             it('should get default byte time', () => {
-                expect(thermalMqttastic['getByteTime']()).toBe(20_000_574);
+                expect(thermalMqttastic['getByteTime']()).toBe(5_000_574);
             });
 
             it('should get and apply modifier to default byte time', () => {
-                expect(thermalMqttastic['getByteTime'](3)).toBe(20_001_722);
+                expect(thermalMqttastic['getByteTime'](3)).toBe(5_001_722);
             });
         });
 
@@ -1958,123 +1958,120 @@ describe('ThermalMqttastic', () => {
         });
     });
 
-    // // TODO: not sure if the base implementation is broken. So tests may be wrong
-    // describe('printBitmap', () => {
-    //     let writeBytesSpy: jest.SpyInstance;
-    //     let timeoutWaitSpy: jest.SpyInstance;
-    //     let writeSpy: jest.SpyInstance;
-    //     let timeoutSetSpy: jest.SpyInstance;
+    // TODO: add more tests
+    describe('printBitmap', () => {
+        let writeBytesSpy: jest.SpyInstance;
+        let timeoutWaitSpy: jest.SpyInstance;
+        let timeoutSetSpy: jest.SpyInstance;
 
-    //     const expectPayload = (...payload: number[]) => {
-    //         expect(timeoutWaitSpy).toHaveBeenCalledWith();
-    //         expect(writeSpy).toHaveBeenCalledWith(...payload);
-    //     };
+        const expectPayload = (...payload: number[]) => {
+            expect(timeoutWaitSpy).toHaveBeenCalledWith();
+            expect(writeBytesSpy).toHaveBeenCalledWith(...payload);
+        };
 
-    //     beforeEach(() => {
-    //         writeBytesSpy = jest
-    //             .spyOn(thermalMqttastic as any, 'writeBytes')
-    //             .mockImplementation(() => {});
-    //         timeoutWaitSpy = jest
-    //             .spyOn(thermalMqttastic as any, 'timeoutWait')
-    //             .mockImplementation(() => {});
-    //         writeSpy = jest.spyOn(thermalMqttastic as any, 'write').mockImplementation(() => 3);
-    //         timeoutSetSpy = jest
-    //             .spyOn(thermalMqttastic as any, 'timeoutSet')
-    //             .mockImplementation(() => {});
-    //     });
+        beforeEach(() => {
+            writeBytesSpy = jest
+                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .mockImplementation(() => {});
+            timeoutWaitSpy = jest
+                .spyOn(thermalMqttastic as any, 'timeoutWait')
+                .mockImplementation(() => {});
+            timeoutSetSpy = jest
+                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .mockImplementation(() => {});
+        });
 
-    //     it('should print a bitmap', async () => {
-    //         expect.assertions(15);
+        // TODO: Not sure if the test is wrong or my implementation. WIP for now
+        it.skip('should print a bitmap', async () => {
+            expect.assertions(14);
 
-    //         await thermalMqttastic.printBitmap(2, 2, [0, 255, 255, 0]);
+            await thermalMqttastic.printBitmap(2, 2, new Uint8Array([0, 255, 255, 0]));
 
-    //         expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
+            expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
 
-    //         expect(writeBytesSpy).toHaveBeenCalledWith(18, C('*'), 2, 2);
+            expect(writeBytesSpy).toHaveBeenCalledWith(18, 42, 2, 1);
 
-    //         expectPayload(0, 255);
-    //         expectPayload(255, 0);
+            expectPayload(0, 255);
+            expectPayload(255, 0);
 
-    //         expect(timeoutSetSpy).toHaveBeenCalledWith(60_000);
+            expect(timeoutSetSpy).toHaveBeenCalledWith(60_000);
 
-    //         expect(thermalMqttastic['prevByte']).toBe(10);
-    //         expect(mockLogger.table).toHaveBeenCalledWith({
-    //             prevByte: 10,
-    //         });
+            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(mockLogger.table).toHaveBeenCalledWith({
+                prevByte: 10,
+            });
 
-    //         expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    //         expect(writeBytesSpy).toHaveBeenCalledTimes(1);
-    //         expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
-    //         expect(writeSpy).toHaveBeenCalledTimes(2);
-    //         expect(timeoutSetSpy).toHaveBeenCalledTimes(1);
-    //         expect(mockLogger.table).toHaveBeenCalledTimes(1);
-    //     });
+            expect(mockLogger.log).toHaveBeenCalledTimes(1);
+            expect(writeBytesSpy).toHaveBeenCalledTimes(1);
+            expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
+            expect(timeoutSetSpy).toHaveBeenCalledTimes(1);
+            expect(mockLogger.table).toHaveBeenCalledTimes(1);
+        });
 
-    //     it('should print a bitmap with maximum width and large height', async () => {
-    //         expect.assertions(6_257);
+        it('should print a bitmap with maximum width and large height', async () => {
+            expect.assertions(6_256);
 
-    //         await thermalMqttastic.printBitmap(
-    //             384,
-    //             256,
-    //             Array.from({ length: 384 * 256 }, () => 255),
-    //         );
+            await thermalMqttastic.printBitmap(
+                384,
+                256,
+                new Uint8Array(Array.from({ length: 384 * 256 }, () => 255)),
+            );
 
-    //         expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
+            expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
 
-    //         for (let y = 0; y < 52; y++) {
-    //             expect(writeBytesSpy).toHaveBeenCalledWith(18, C('*'), 5, 48);
-    //         }
+            for (let y = 0; y < 52; y++) {
+                expect(writeBytesSpy).toHaveBeenCalledWith(18, 42, 5, 48);
+            }
 
-    //         for (let y = 0; y < 3_072; y++) {
-    //             expectPayload(255, 255, 255, 255);
-    //         }
+            for (let y = 0; y < 3_072; y++) {
+                expectPayload(255, 255, 255, 255);
+            }
 
-    //         for (let y = 0; y < 52; y++) {
-    //             expect(timeoutSetSpy).toHaveBeenCalledWith(150_000);
-    //         }
+            for (let y = 0; y < 52; y++) {
+                expect(timeoutSetSpy).toHaveBeenCalledWith(150_000);
+            }
 
-    //         expect(thermalMqttastic['prevByte']).toBe(10);
-    //         expect(mockLogger.table).toHaveBeenCalledWith({
-    //             prevByte: 10,
-    //         });
+            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(mockLogger.table).toHaveBeenCalledWith({
+                prevByte: 10,
+            });
 
-    //         expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    //         expect(writeBytesSpy).toHaveBeenCalledTimes(52);
-    //         expect(timeoutWaitSpy).toHaveBeenCalledTimes(3_072);
-    //         expect(writeSpy).toHaveBeenCalledTimes(3_072);
-    //         expect(timeoutSetSpy).toHaveBeenCalledTimes(52);
-    //         expect(mockLogger.table).toHaveBeenCalledTimes(1);
-    //     });
+            expect(mockLogger.log).toHaveBeenCalledTimes(1);
+            expect(writeBytesSpy).toHaveBeenCalledTimes(3_124);
+            expect(timeoutWaitSpy).toHaveBeenCalledTimes(3_072);
+            expect(timeoutSetSpy).toHaveBeenCalledTimes(52);
+            expect(mockLogger.table).toHaveBeenCalledTimes(1);
+        });
 
-    //     it('should print a bitmap with single row', async () => {
-    //         expect.assertions(7);
+        // TODO: Not sure if the test is wrong or my implementation. WIP for now
+        it.skip('should print a bitmap with single row', async () => {
+            expect.assertions(6);
 
-    //         await thermalMqttastic.printBitmap(8, 1, [0, 1, 2, 3, 4, 5, 6, 7]);
+            await thermalMqttastic.printBitmap(8, 1, new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
 
-    //         expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
+            expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
 
-    //         expect(writeBytesSpy).toHaveBeenCalledWith(18, C('*'), 1, 2);
+            expect(writeBytesSpy).toHaveBeenCalledWith(18, 42, 1, 2);
 
-    //         expectPayload(0, 1);
-    //         expectPayload(2, 3);
-    //         expectPayload(4, 5);
-    //         expectPayload(6, 7);
+            expectPayload(0, 1);
+            expectPayload(2, 3);
+            expectPayload(4, 5);
+            expectPayload(6, 7);
 
-    //         expect(timeoutSetSpy).toHaveBeenCalledWith(23);
+            expect(timeoutSetSpy).toHaveBeenCalledWith(23);
 
-    //         expect(thermalMqttastic['prevByte']).toBe(10);
-    //         expect(mockLogger.table).toHaveBeenCalledWith({
-    //             prevByte: 10,
-    //         });
+            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(mockLogger.table).toHaveBeenCalledWith({
+                prevByte: 10,
+            });
 
-    //         expect(mockLogger.log).toHaveBeenCalledTimes(1);
-    //         expect(writeBytesSpy).toHaveBeenCalledTimes(1);
-    //         expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
-    //         expect(writeSpy).toHaveBeenCalledTimes(2);
-    //         expect(timeoutSetSpy).toHaveBeenCalledTimes(2);
-    //         expect(mockLogger.table).toHaveBeenCalledTimes(1);
-    //     });
-    // });
+            expect(mockLogger.log).toHaveBeenCalledTimes(1);
+            expect(writeBytesSpy).toHaveBeenCalledTimes(1);
+            expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
+            expect(timeoutSetSpy).toHaveBeenCalledTimes(2);
+            expect(mockLogger.table).toHaveBeenCalledTimes(1);
+        });
+    });
 
     describe('offline', () => {
         it('should put printer offline', async () => {
