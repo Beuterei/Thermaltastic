@@ -3,34 +3,28 @@
 /* eslint-disable id-length */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/dot-notation */
-import type { AsyncMqttClient } from 'async-mqtt';
-import { connectAsync } from 'async-mqtt';
 import { mock } from 'jest-mock-extended';
 import { ZodError } from 'zod';
-import { ThermalMqttastic } from '../src';
+import type { Adapter } from '../src';
+import { Thermaltastic } from '../src';
 import { delay } from '../src/util';
-
-jest.mock('async-mqtt', () => ({
-    connectAsync: jest.fn(() => mock<AsyncMqttClient>()),
-}));
 
 jest.mock('../src/util', () => ({
     delay: jest.fn(),
     C: jest.requireActual('../src/util').C,
 }));
 
-describe('ThermalMqttastic', () => {
+describe('thermaltastic', () => {
     const mockLogger = mock<Console>();
-    let thermalMqttastic: ThermalMqttastic;
+    const mockAdapter = mock<Adapter>();
+    let thermaltastic: Thermaltastic;
 
     beforeEach(async () => {
-        thermalMqttastic = new ThermalMqttastic({
-            mqttUrl: 'mqtt://test',
-            mqttOptions: { password: 'test' },
+        thermaltastic = new Thermaltastic(mockAdapter, {
             logger: mockLogger,
         });
 
-        await thermalMqttastic.begin();
+        await thermaltastic.begin();
 
         // to not count mock calls during init
         // the call counts are always referring to the counts of calls from the to test unit
@@ -45,25 +39,23 @@ describe('ThermalMqttastic', () => {
 
     describe('constructor', () => {
         it('should set additionalStackTimeout default', () => {
-            expect(thermalMqttastic['additionalStackTimeout']).toBe(5);
+            expect(thermaltastic['additionalStackTimeout']).toBe(5);
         });
 
         it('should set additionalStackTimeout', () => {
-            thermalMqttastic = new ThermalMqttastic({
-                mqttUrl: 'mqtt://test',
-                mqttOptions: { password: 'test' },
+            thermaltastic = new Thermaltastic(mockAdapter, {
                 logger: mockLogger,
                 additionalStackTimeout: 30,
             });
 
-            expect(thermalMqttastic['additionalStackTimeout']).toBe(30);
+            expect(thermaltastic['additionalStackTimeout']).toBe(30);
         });
     });
 
     describe('protected', () => {
         describe('mayLog', () => {
             it('should log when logger is provided', () => {
-                thermalMqttastic['mayLog']('test');
+                thermaltastic['mayLog']('test');
 
                 expect(mockLogger.log).toHaveBeenCalledWith('test');
 
@@ -71,12 +63,9 @@ describe('ThermalMqttastic', () => {
             });
 
             it('should not log when no logger is provided', () => {
-                thermalMqttastic = new ThermalMqttastic({
-                    mqttUrl: 'mqtt://test',
-                    mqttOptions: { password: 'test' },
-                });
+                thermaltastic = new Thermaltastic(mockAdapter);
 
-                thermalMqttastic['mayLog']('test');
+                thermaltastic['mayLog']('test');
 
                 expect(mockLogger.log).not.toHaveBeenCalled();
             });
@@ -84,7 +73,7 @@ describe('ThermalMqttastic', () => {
 
         describe('mayTable', () => {
             it('should table when logger is provided', () => {
-                thermalMqttastic['mayTable']({ test: 'test' });
+                thermaltastic['mayTable']({ test: 'test' });
 
                 expect(mockLogger.table).toHaveBeenCalledWith({ test: 'test' });
 
@@ -92,12 +81,9 @@ describe('ThermalMqttastic', () => {
             });
 
             it('should not table when no logger is provided', () => {
-                thermalMqttastic = new ThermalMqttastic({
-                    mqttUrl: 'mqtt://test',
-                    mqttOptions: { password: 'test' },
-                });
+                thermaltastic = new Thermaltastic(mockAdapter);
 
-                thermalMqttastic['mayTable']({ test: 'test' });
+                thermaltastic['mayTable']({ test: 'test' });
 
                 expect(mockLogger.table).not.toHaveBeenCalled();
             });
@@ -105,40 +91,11 @@ describe('ThermalMqttastic', () => {
 
         describe('getByteTime', () => {
             it('should get default byte time', () => {
-                expect(thermalMqttastic['getByteTime']()).toBe(5_000_574);
+                expect(thermaltastic['getByteTime']()).toBe(5_000_574);
             });
 
             it('should get and apply modifier to default byte time', () => {
-                expect(thermalMqttastic['getByteTime'](3)).toBe(5_001_722);
-            });
-        });
-
-        describe('publish', () => {
-            it('should publish topic', async () => {
-                expect.assertions(2);
-
-                await thermalMqttastic['publish']('test', 'payload');
-
-                expect(thermalMqttastic['mqttClient']?.publish).toHaveBeenCalledWith(
-                    'test',
-                    'payload',
-                    { qos: 2 },
-                );
-
-                expect(thermalMqttastic['mqttClient']?.publish).toHaveBeenCalledTimes(1);
-            });
-
-            it('should throw when no client is initialized', async () => {
-                expect.assertions(2);
-
-                thermalMqttastic = new ThermalMqttastic({
-                    mqttUrl: 'mqtt://test',
-                    mqttOptions: { password: 'test' },
-                });
-
-                await expect(thermalMqttastic['publish']('test', 'payload')).rejects.toThrow(Error);
-
-                expect(thermalMqttastic['mqttClient']).toBeUndefined();
+                expect(thermaltastic['getByteTime'](3)).toBe(5_001_722);
             });
         });
 
@@ -148,11 +105,11 @@ describe('ThermalMqttastic', () => {
 
                 const resumeTime = Date.now() + 5;
 
-                thermalMqttastic['timeoutSet'](5_000_000);
+                thermaltastic['timeoutSet'](5_000_000);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('timeoutSet called');
 
-                expect(thermalMqttastic['resumeTime']).toBe(resumeTime);
+                expect(thermaltastic['resumeTime']).toBe(resumeTime);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('Timeout set to 5');
                 expect(mockLogger.table).toHaveBeenCalledWith({
@@ -168,9 +125,9 @@ describe('ThermalMqttastic', () => {
             it('should wait timeout', async () => {
                 expect.assertions(5);
 
-                thermalMqttastic['resumeTime'] = Date.now() + 5;
+                thermaltastic['resumeTime'] = Date.now() + 5;
 
-                await thermalMqttastic['timeoutWait']();
+                await thermaltastic['timeoutWait']();
 
                 expect(mockLogger.log).toHaveBeenCalledWith('timeoutWait called');
 
@@ -188,25 +145,22 @@ describe('ThermalMqttastic', () => {
                 expect.assertions(11);
 
                 const timeoutWaitSpy = jest
-                    .spyOn(thermalMqttastic as any, 'timeoutWait')
-                    .mockImplementation(() => {});
-                const publishSpy = jest
-                    .spyOn(thermalMqttastic as any, 'publish')
+                    .spyOn(thermaltastic as any, 'timeoutWait')
                     .mockImplementation(() => {});
                 const getByteTimeSpy = jest
-                    .spyOn(thermalMqttastic as any, 'getByteTime')
+                    .spyOn(thermaltastic as any, 'getByteTime')
                     .mockImplementation(() => 3);
                 const timeoutSetSpy = jest
-                    .spyOn(thermalMqttastic as any, 'timeoutSet')
+                    .spyOn(thermaltastic as any, 'timeoutSet')
                     .mockImplementation(() => {});
 
-                await thermalMqttastic['writeBytes'](12, 13);
+                await thermaltastic['writeBytes'](12, 13);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('writeBytes called');
 
                 expect(timeoutWaitSpy).toHaveBeenCalledWith();
 
-                expect(publishSpy).toHaveBeenCalledWith('writeBytes', '12,13');
+                expect(mockAdapter.writeBytes).toHaveBeenCalledWith(12, 13);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('Written 12,13 to stream (writeBytes)');
 
@@ -216,7 +170,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(2);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(1);
-                expect(publishSpy).toHaveBeenCalledTimes(1);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(1);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(1);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(1);
             });
@@ -224,7 +178,6 @@ describe('ThermalMqttastic', () => {
 
         describe('write', () => {
             let timeoutWaitSpy: jest.SpyInstance;
-            let publishSpy: jest.SpyInstance;
             let getByteTimeSpy: jest.SpyInstance;
             let timeoutSetSpy: jest.SpyInstance;
 
@@ -232,14 +185,12 @@ describe('ThermalMqttastic', () => {
                 temporaryByteTime = 0,
                 ...payload: [number, number?, number?, number?]
             ) => {
-                const payloadString = payload.join(',');
-
                 expect(timeoutWaitSpy).toHaveBeenCalledWith();
 
-                expect(publishSpy).toHaveBeenCalledWith('write', payloadString);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledWith(...payload);
 
                 expect(mockLogger.log).toHaveBeenCalledWith(
-                    `Written ${payloadString} to stream (write)`,
+                    `Written ${payload.join(',')} to stream (write)`,
                 );
 
                 expect(getByteTimeSpy).toHaveBeenCalledWith(payload.length);
@@ -249,23 +200,20 @@ describe('ThermalMqttastic', () => {
 
             beforeEach(() => {
                 timeoutWaitSpy = jest
-                    .spyOn(thermalMqttastic as any, 'timeoutWait')
-                    .mockImplementation(() => {});
-                publishSpy = jest
-                    .spyOn(thermalMqttastic as any, 'publish')
+                    .spyOn(thermaltastic as any, 'timeoutWait')
                     .mockImplementation(() => {});
                 getByteTimeSpy = jest
-                    .spyOn(thermalMqttastic as any, 'getByteTime')
+                    .spyOn(thermaltastic as any, 'getByteTime')
                     .mockImplementation(() => 3);
                 timeoutSetSpy = jest
-                    .spyOn(thermalMqttastic as any, 'timeoutSet')
+                    .spyOn(thermaltastic as any, 'timeoutSet')
                     .mockImplementation(() => {});
             });
 
             it('should write bytes', async () => {
                 expect.assertions(12);
 
-                await thermalMqttastic['write'](12, 14);
+                await thermaltastic['write'](12, 14);
 
                 // expect(columnSetSpy).toHaveBeenCalledWith(1);
                 // expect(prevByteSetSpy).toHaveBeenCalledWith(12);
@@ -285,7 +233,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(2);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(1);
-                expect(publishSpy).toHaveBeenCalledTimes(1);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(1);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(1);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(1);
             });
@@ -293,7 +241,7 @@ describe('ThermalMqttastic', () => {
             it('should write only certain bytes', async () => {
                 expect.assertions(12);
 
-                await thermalMqttastic['write'](12, 14, undefined, 13);
+                await thermaltastic['write'](12, 14, undefined, 13);
 
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     column: 1,
@@ -309,7 +257,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(2);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(1);
-                expect(publishSpy).toHaveBeenCalledTimes(1);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(1);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(1);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(1);
             });
@@ -317,7 +265,7 @@ describe('ThermalMqttastic', () => {
             it('should split write chunks by line breaks', async () => {
                 expect.assertions(19);
 
-                await thermalMqttastic['write'](12, 14, 10, 15);
+                await thermaltastic['write'](12, 14, 10, 15);
 
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     column: 1,
@@ -344,7 +292,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(3);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
-                expect(publishSpy).toHaveBeenCalledTimes(2);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(2);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(2);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(2);
             });
@@ -352,9 +300,9 @@ describe('ThermalMqttastic', () => {
             it('should split write chunks when colum max is hit', async () => {
                 expect.assertions(18);
 
-                thermalMqttastic['column'] = 31; // fake almost full colum
+                thermaltastic['column'] = 31; // fake almost full colum
 
-                await thermalMqttastic['write'](12, 14);
+                await thermaltastic['write'](12, 14);
 
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     column: 32,
@@ -377,7 +325,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(3);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
-                expect(publishSpy).toHaveBeenCalledTimes(2);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(2);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(2);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(2);
             });
@@ -385,7 +333,7 @@ describe('ThermalMqttastic', () => {
             it('should wait additional time when previous byte is line break', async () => {
                 expect.assertions(17);
 
-                await thermalMqttastic['write'](10, 10);
+                await thermaltastic['write'](10, 10);
 
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     column: 0,
@@ -403,7 +351,7 @@ describe('ThermalMqttastic', () => {
 
                 expect(mockLogger.log).toHaveBeenCalledTimes(3);
                 expect(timeoutWaitSpy).toHaveBeenCalledTimes(2);
-                expect(publishSpy).toHaveBeenCalledTimes(2);
+                expect(mockAdapter.writeBytes).toHaveBeenCalledTimes(2);
                 expect(getByteTimeSpy).toHaveBeenCalledTimes(2);
                 expect(timeoutSetSpy).toHaveBeenCalledTimes(2);
             });
@@ -413,12 +361,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font B', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](1);
+                thermaltastic['adjustCharValues'](1);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(17);
-                expect(thermalMqttastic['maxColumn']).toBe(42);
+                expect(thermaltastic['charHeight']).toBe(17);
+                expect(thermaltastic['maxColumn']).toBe(42);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 17,
                     maxColumn: 42,
@@ -431,12 +379,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font B and double width mode', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](33);
+                thermaltastic['adjustCharValues'](33);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(17);
-                expect(thermalMqttastic['maxColumn']).toBe(21);
+                expect(thermaltastic['charHeight']).toBe(17);
+                expect(thermaltastic['maxColumn']).toBe(21);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 17,
                     maxColumn: 21,
@@ -449,12 +397,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font B and double height mode', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](17);
+                thermaltastic['adjustCharValues'](17);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(34);
-                expect(thermalMqttastic['maxColumn']).toBe(42);
+                expect(thermaltastic['charHeight']).toBe(34);
+                expect(thermaltastic['maxColumn']).toBe(42);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 34,
                     maxColumn: 42,
@@ -467,12 +415,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font A', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](0);
+                thermaltastic['adjustCharValues'](0);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(24);
-                expect(thermalMqttastic['maxColumn']).toBe(32);
+                expect(thermaltastic['charHeight']).toBe(24);
+                expect(thermaltastic['maxColumn']).toBe(32);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 24,
                     maxColumn: 32,
@@ -485,12 +433,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font A and double width mode', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](32);
+                thermaltastic['adjustCharValues'](32);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(24);
-                expect(thermalMqttastic['maxColumn']).toBe(16);
+                expect(thermaltastic['charHeight']).toBe(24);
+                expect(thermaltastic['maxColumn']).toBe(16);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 24,
                     maxColumn: 16,
@@ -503,12 +451,12 @@ describe('ThermalMqttastic', () => {
             it('should adjust character values for font A and double height mode', async () => {
                 expect.assertions(6);
 
-                thermalMqttastic['adjustCharValues'](16);
+                thermaltastic['adjustCharValues'](16);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('adjustCharValues called');
 
-                expect(thermalMqttastic['charHeight']).toBe(48);
-                expect(thermalMqttastic['maxColumn']).toBe(32);
+                expect(thermaltastic['charHeight']).toBe(48);
+                expect(thermaltastic['maxColumn']).toBe(32);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     charHeight: 48,
                     maxColumn: 32,
@@ -523,20 +471,20 @@ describe('ThermalMqttastic', () => {
             it('should set print mode', async () => {
                 expect.assertions(9);
 
-                thermalMqttastic['printMode'] = 5; // Not a actual value. Just want to force bitwise
+                thermaltastic['printMode'] = 5; // Not a actual value. Just want to force bitwise
 
                 const writePrintModeSpy = jest
-                    .spyOn(thermalMqttastic as any, 'writePrintMode')
+                    .spyOn(thermaltastic as any, 'writePrintMode')
                     .mockImplementation(() => {});
                 const adjustCharValuesSpy = jest
-                    .spyOn(thermalMqttastic as any, 'adjustCharValues')
+                    .spyOn(thermaltastic as any, 'adjustCharValues')
                     .mockImplementation(() => {});
 
-                await thermalMqttastic['setPrintMode'](3);
+                await thermaltastic['setPrintMode'](3);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('setPrintMode called');
 
-                expect(thermalMqttastic['printMode']).toBe(7);
+                expect(thermaltastic['printMode']).toBe(7);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     printMode: 7,
                 });
@@ -556,20 +504,20 @@ describe('ThermalMqttastic', () => {
             it('should unset print mode', async () => {
                 expect.assertions(9);
 
-                thermalMqttastic['printMode'] = 7; // Not a actual value. Just want to force bitwise
+                thermaltastic['printMode'] = 7; // Not a actual value. Just want to force bitwise
 
                 const writePrintModeSpy = jest
-                    .spyOn(thermalMqttastic as any, 'writePrintMode')
+                    .spyOn(thermaltastic as any, 'writePrintMode')
                     .mockImplementation(() => {});
                 const adjustCharValuesSpy = jest
-                    .spyOn(thermalMqttastic as any, 'adjustCharValues')
+                    .spyOn(thermaltastic as any, 'adjustCharValues')
                     .mockImplementation(() => {});
 
-                await thermalMqttastic['unsetPrintMode'](3);
+                await thermaltastic['unsetPrintMode'](3);
 
                 expect(mockLogger.log).toHaveBeenCalledWith('unsetPrintMode called');
 
-                expect(thermalMqttastic['printMode']).toBe(4);
+                expect(thermaltastic['printMode']).toBe(4);
                 expect(mockLogger.table).toHaveBeenCalledWith({
                     printMode: 4,
                 });
@@ -589,13 +537,13 @@ describe('ThermalMqttastic', () => {
             it('should write print mode', async () => {
                 expect.assertions(4);
 
-                thermalMqttastic['printMode'] = 2; // Not a actual value. Just want to force bitwise
+                thermaltastic['printMode'] = 2; // Not a actual value. Just want to force bitwise
 
                 const writeBytesSpy = jest
-                    .spyOn(thermalMqttastic as any, 'writeBytes')
+                    .spyOn(thermaltastic as any, 'writeBytes')
                     .mockImplementation(() => {});
 
-                await thermalMqttastic['writePrintMode']();
+                await thermaltastic['writePrintMode']();
 
                 expect(mockLogger.log).toHaveBeenCalledWith('writePrintMode called');
 
@@ -609,12 +557,12 @@ describe('ThermalMqttastic', () => {
 
     describe('setTimes', () => {
         it('should set new times', () => {
-            thermalMqttastic.setTimes(12, 13);
+            thermaltastic.setTimes(12, 13);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setTimes called');
 
-            expect(thermalMqttastic['dotPrintTime']).toBe(12);
-            expect(thermalMqttastic['dotFeedTime']).toBe(13);
+            expect(thermaltastic['dotPrintTime']).toBe(12);
+            expect(thermaltastic['dotFeedTime']).toBe(13);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 dotPrintTime: 12,
                 dotFeedTime: 13,
@@ -624,13 +572,13 @@ describe('ThermalMqttastic', () => {
         });
 
         it('should validate the dotPrintTime parameter', () => {
-            expect(() => thermalMqttastic.setTimes(12.1, 13)).toThrow(ZodError);
-            expect(() => thermalMqttastic.setTimes(-12, 13)).toThrow(ZodError);
+            expect(() => thermaltastic.setTimes(12.1, 13)).toThrow(ZodError);
+            expect(() => thermaltastic.setTimes(-12, 13)).toThrow(ZodError);
         });
 
         it('should validate the dotFeedTime parameter', () => {
-            expect(() => thermalMqttastic.setTimes(12, 13.1)).toThrow(ZodError);
-            expect(() => thermalMqttastic.setTimes(12, -13)).toThrow(ZodError);
+            expect(() => thermaltastic.setTimes(12, 13.1)).toThrow(ZodError);
+            expect(() => thermaltastic.setTimes(12, -13)).toThrow(ZodError);
         });
     });
 
@@ -638,11 +586,9 @@ describe('ThermalMqttastic', () => {
         it('should print text', async () => {
             expect.assertions(7);
 
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await thermalMqttastic.print('abcdef');
+            await thermaltastic.print('abcdef');
 
             expect(mockLogger.log).toHaveBeenCalledWith('print called');
 
@@ -661,11 +607,9 @@ describe('ThermalMqttastic', () => {
         it('should throw when split fails', async () => {
             expect.assertions(4);
 
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await expect(thermalMqttastic.print('')).rejects.toThrow(Error);
+            await expect(thermaltastic.print('')).rejects.toThrow(Error);
 
             expect(mockLogger.log).toHaveBeenCalledWith('print called');
 
@@ -678,14 +622,10 @@ describe('ThermalMqttastic', () => {
         it('should print text and feed line', async () => {
             expect.assertions(6);
 
-            const printSpy = jest
-                .spyOn(thermalMqttastic as any, 'print')
-                .mockImplementation(() => {});
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const printSpy = jest.spyOn(thermaltastic as any, 'print').mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await thermalMqttastic.println('abcdef');
+            await thermaltastic.println('abcdef');
 
             expect(mockLogger.log).toHaveBeenCalledWith('println called');
 
@@ -703,26 +643,20 @@ describe('ThermalMqttastic', () => {
             expect.assertions(18);
 
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
-            const wakeSpy = jest
-                .spyOn(thermalMqttastic as any, 'wake')
-                .mockImplementation(() => {});
-            const resetSpy = jest
-                .spyOn(thermalMqttastic as any, 'reset')
-                .mockImplementation(() => {});
+            const wakeSpy = jest.spyOn(thermaltastic as any, 'wake').mockImplementation(() => {});
+            const resetSpy = jest.spyOn(thermaltastic as any, 'reset').mockImplementation(() => {});
 
-            await thermalMqttastic.begin();
+            await thermaltastic.begin();
 
             expect(mockLogger.log).toHaveBeenCalledWith('begin called');
 
-            expect(mockLogger.log).toHaveBeenCalledWith('Connecting to MQTT');
-            expect(connectAsync).toHaveBeenCalledWith('mqtt://test', {
-                password: 'test',
-            });
-            expect(mockLogger.log).toHaveBeenCalledWith('MQTT connection successful');
+            expect(mockLogger.log).toHaveBeenCalledWith('Begin adapter');
+            expect(mockAdapter.begin).toHaveBeenCalledWith();
+            expect(mockLogger.log).toHaveBeenCalledWith('Begin adapter successful');
 
-            expect(thermalMqttastic['firmware']).toBe(268);
+            expect(thermaltastic['firmware']).toBe(268);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 firmware: 268,
             });
@@ -733,9 +667,9 @@ describe('ThermalMqttastic', () => {
 
             expect(resetSpy).toHaveBeenCalledWith();
 
-            expect(thermalMqttastic['dotPrintTime']).toBe(30_000);
-            expect(thermalMqttastic['dotFeedTime']).toBe(2_100);
-            expect(thermalMqttastic['maxChunkHeight']).toBe(255);
+            expect(thermaltastic['dotPrintTime']).toBe(30_000);
+            expect(thermaltastic['dotFeedTime']).toBe(2_100);
+            expect(thermaltastic['maxChunkHeight']).toBe(255);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 dotPrintTime: 30_000,
                 dotFeedTime: 2_100,
@@ -752,8 +686,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the firmware parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.begin(-1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.begin(1.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.begin(-1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.begin(1.1)).rejects.toThrow(ZodError);
         });
     });
 
@@ -762,27 +696,27 @@ describe('ThermalMqttastic', () => {
             expect.assertions(12);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.reset();
+            await thermaltastic.reset();
 
             expect(mockLogger.log).toHaveBeenCalledWith('reset called');
 
             expect(writeBytesSpy).toHaveBeenCalledWith(27, 64);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
-            expect(thermalMqttastic['column']).toBe(0);
-            expect(thermalMqttastic['maxColumn']).toBe(32);
-            expect(thermalMqttastic['charHeight']).toBe(24);
-            expect(thermalMqttastic['lineSpacing']).toBe(6);
-            expect(thermalMqttastic['barcodeHeight']).toBe(50);
+            expect(thermaltastic['prevByte']).toBe(10);
+            expect(thermaltastic['column']).toBe(0);
+            expect(thermaltastic['maxColumn']).toBe(32);
+            expect(thermaltastic['charHeight']).toBe(24);
+            expect(thermaltastic['lineSpacing']).toBe(6);
+            expect(thermaltastic['barcodeHeight']).toBe(50);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
                 column: 0,
@@ -801,21 +735,21 @@ describe('ThermalMqttastic', () => {
             expect.assertions(15);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.reset();
+            await thermaltastic.reset();
 
             expect(mockLogger.log).toHaveBeenCalledWith('reset called');
 
             expect(writeBytesSpy).toHaveBeenCalledWith(27, 64);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
-            expect(thermalMqttastic['column']).toBe(0);
-            expect(thermalMqttastic['maxColumn']).toBe(32);
-            expect(thermalMqttastic['charHeight']).toBe(24);
-            expect(thermalMqttastic['lineSpacing']).toBe(6);
-            expect(thermalMqttastic['barcodeHeight']).toBe(50);
+            expect(thermaltastic['prevByte']).toBe(10);
+            expect(thermaltastic['column']).toBe(0);
+            expect(thermaltastic['maxColumn']).toBe(32);
+            expect(thermaltastic['charHeight']).toBe(24);
+            expect(thermaltastic['lineSpacing']).toBe(6);
+            expect(thermaltastic['barcodeHeight']).toBe(50);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
                 column: 0,
@@ -840,40 +774,40 @@ describe('ThermalMqttastic', () => {
             expect.assertions(24);
 
             const onlineSpy = jest
-                .spyOn(thermalMqttastic as any, 'online')
+                .spyOn(thermaltastic as any, 'online')
                 .mockImplementation(() => {});
             const justifySpy = jest
-                .spyOn(thermalMqttastic as any, 'justify')
+                .spyOn(thermaltastic as any, 'justify')
                 .mockImplementation(() => {});
             const inverseOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'inverseOff')
+                .spyOn(thermaltastic as any, 'inverseOff')
                 .mockImplementation(() => {});
             const doubleHeightOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOff')
+                .spyOn(thermaltastic as any, 'doubleHeightOff')
                 .mockImplementation(() => {});
             const setLineHeightSpy = jest
-                .spyOn(thermalMqttastic as any, 'setLineHeight')
+                .spyOn(thermaltastic as any, 'setLineHeight')
                 .mockImplementation(() => {});
             const boldOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'boldOff')
+                .spyOn(thermaltastic as any, 'boldOff')
                 .mockImplementation(() => {});
             const underlineOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'underlineOff')
+                .spyOn(thermaltastic as any, 'underlineOff')
                 .mockImplementation(() => {});
             const setBarcodeHeightSpy = jest
-                .spyOn(thermalMqttastic as any, 'setBarcodeHeight')
+                .spyOn(thermaltastic as any, 'setBarcodeHeight')
                 .mockImplementation(() => {});
             const setSizeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setSize')
+                .spyOn(thermaltastic as any, 'setSize')
                 .mockImplementation(() => {});
             const setCharsetSpy = jest
-                .spyOn(thermalMqttastic as any, 'setCharset')
+                .spyOn(thermaltastic as any, 'setCharset')
                 .mockImplementation(() => {});
             const setCodePageSpy = jest
-                .spyOn(thermalMqttastic as any, 'setCodePage')
+                .spyOn(thermaltastic as any, 'setCodePage')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setDefaults();
+            await thermaltastic.setDefaults();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setDefaults called');
 
@@ -909,13 +843,11 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const printlnSpy = jest
-                .spyOn(thermalMqttastic as any, 'println')
+                .spyOn(thermaltastic as any, 'println')
                 .mockImplementation(() => {});
-            const feedSpy = jest
-                .spyOn(thermalMqttastic as any, 'feed')
-                .mockImplementation(() => {});
+            const feedSpy = jest.spyOn(thermaltastic as any, 'feed').mockImplementation(() => {});
 
-            await thermalMqttastic.test();
+            await thermaltastic.test();
 
             expect(mockLogger.log).toHaveBeenCalledWith('test called');
 
@@ -933,13 +865,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.testPage();
+            await thermaltastic.testPage();
 
             expect(mockLogger.log).toHaveBeenCalledWith('testPage called');
 
@@ -957,14 +889,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setBarcodeHeight();
+            await thermaltastic.setBarcodeHeight();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setBarcodeHeight called');
 
-            expect(thermalMqttastic['barcodeHeight']).toBe(50);
+            expect(thermaltastic['barcodeHeight']).toBe(50);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 barcodeHeight: 50,
             });
@@ -980,14 +912,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setBarcodeHeight(23);
+            await thermaltastic.setBarcodeHeight(23);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setBarcodeHeight called');
 
-            expect(thermalMqttastic['barcodeHeight']).toBe(23);
+            expect(thermaltastic['barcodeHeight']).toBe(23);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 barcodeHeight: 23,
             });
@@ -1002,8 +934,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the barcodeHeight parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.setBarcodeHeight(13.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setBarcodeHeight(-13)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setBarcodeHeight(13.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setBarcodeHeight(-13)).rejects.toThrow(ZodError);
         });
     });
 
@@ -1013,24 +945,24 @@ describe('ThermalMqttastic', () => {
         let timeoutSetSpy: jest.SpyInstance;
 
         beforeEach(() => {
-            feedSpy = jest.spyOn(thermalMqttastic as any, 'feed').mockImplementation(() => {});
+            feedSpy = jest.spyOn(thermaltastic as any, 'feed').mockImplementation(() => {});
             writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
         });
         it('should print a barcode on old firmware', async () => {
             expect.assertions(19);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
-            await thermalMqttastic.printBarcode('abcde', 8);
+            await thermaltastic.printBarcode('abcde', 8);
 
             expect(mockLogger.log).toHaveBeenCalledWith('printBarcode called');
 
@@ -1049,7 +981,7 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(2_700_000);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(thermaltastic['prevByte']).toBe(10);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
             });
@@ -1064,7 +996,7 @@ describe('ThermalMqttastic', () => {
         it('should print a barcode on new firmware', async () => {
             expect.assertions(19);
 
-            await thermalMqttastic.printBarcode('abcde', 8);
+            await thermaltastic.printBarcode('abcde', 8);
 
             expect(mockLogger.log).toHaveBeenCalledWith('printBarcode called');
 
@@ -1083,7 +1015,7 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(2_700_000);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(thermaltastic['prevByte']).toBe(10);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
             });
@@ -1099,7 +1031,7 @@ describe('ThermalMqttastic', () => {
             expect.assertions(1);
 
             await expect(
-                thermalMqttastic.printBarcode(
+                thermaltastic.printBarcode(
                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
                     8,
                 ),
@@ -1112,14 +1044,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writePrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'writePrintMode')
+                .spyOn(thermaltastic as any, 'writePrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.normal();
+            await thermaltastic.normal();
 
             expect(mockLogger.log).toHaveBeenCalledWith('normal called');
 
-            expect(thermalMqttastic['printMode']).toBe(0);
+            expect(thermaltastic['printMode']).toBe(0);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 printMode: 0,
             });
@@ -1137,19 +1069,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.inverseOn();
+            await thermaltastic.inverseOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('inverseOn called');
 
@@ -1164,13 +1096,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.inverseOn();
+            await thermaltastic.inverseOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('inverseOn called');
 
@@ -1187,19 +1119,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.inverseOff();
+            await thermaltastic.inverseOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('inverseOff called');
 
@@ -1214,13 +1146,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.inverseOff();
+            await thermaltastic.inverseOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('inverseOff called');
 
@@ -1237,19 +1169,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.upsideDownOn();
+            await thermaltastic.upsideDownOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('upsideDownOn called');
 
@@ -1264,13 +1196,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.upsideDownOn();
+            await thermaltastic.upsideDownOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('upsideDownOn called');
 
@@ -1287,19 +1219,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.upsideDownOff();
+            await thermaltastic.upsideDownOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('upsideDownOff called');
 
@@ -1314,13 +1246,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(5);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.upsideDownOff();
+            await thermaltastic.upsideDownOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('upsideDownOff called');
 
@@ -1337,10 +1269,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.doubleHeightOn();
+            await thermaltastic.doubleHeightOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('doubleHeightOn called');
 
@@ -1356,10 +1288,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.doubleHeightOff();
+            await thermaltastic.doubleHeightOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('doubleHeightOff called');
 
@@ -1375,10 +1307,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.doubleWidthOn();
+            await thermaltastic.doubleWidthOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('doubleWidthOn called');
 
@@ -1394,10 +1326,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.doubleWidthOff();
+            await thermaltastic.doubleWidthOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('doubleWidthOff called');
 
@@ -1413,10 +1345,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.strikeOn();
+            await thermaltastic.strikeOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('strikeOn called');
 
@@ -1432,10 +1364,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.strikeOff();
+            await thermaltastic.strikeOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('strikeOff called');
 
@@ -1451,10 +1383,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.boldOn();
+            await thermaltastic.boldOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('boldOn called');
 
@@ -1470,10 +1402,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.boldOff();
+            await thermaltastic.boldOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('boldOff called');
 
@@ -1489,10 +1421,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytespy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.justify();
+            await thermaltastic.justify();
 
             expect(mockLogger.log).toHaveBeenCalledWith('justify called');
 
@@ -1506,10 +1438,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytespy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.justify('L');
+            await thermaltastic.justify('L');
 
             expect(mockLogger.log).toHaveBeenCalledWith('justify called');
 
@@ -1523,10 +1455,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytespy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.justify('R');
+            await thermaltastic.justify('R');
 
             expect(mockLogger.log).toHaveBeenCalledWith('justify called');
 
@@ -1540,10 +1472,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytespy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.justify('C');
+            await thermaltastic.justify('C');
 
             expect(mockLogger.log).toHaveBeenCalledWith('justify called');
 
@@ -1559,16 +1491,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await thermalMqttastic.feed();
+            await thermaltastic.feed();
 
             expect(mockLogger.log).toHaveBeenCalledWith('feed called');
 
@@ -1586,22 +1516,20 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await thermalMqttastic.feed(2);
+            await thermaltastic.feed(2);
 
             expect(mockLogger.log).toHaveBeenCalledWith('feed called');
 
@@ -1618,16 +1546,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
-            const writeSpy = jest
-                .spyOn(thermalMqttastic as any, 'write')
-                .mockImplementation(() => {});
+            const writeSpy = jest.spyOn(thermaltastic as any, 'write').mockImplementation(() => {});
 
-            await thermalMqttastic.feed(2);
+            await thermaltastic.feed(2);
 
             expect(mockLogger.log).toHaveBeenCalledWith('feed called');
 
@@ -1647,13 +1573,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(10);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.feedRows();
+            await thermaltastic.feedRows();
 
             expect(mockLogger.log).toHaveBeenCalledWith('feedRows called');
 
@@ -1661,8 +1587,8 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(2_100);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
-            expect(thermalMqttastic['column']).toBe(0);
+            expect(thermaltastic['prevByte']).toBe(10);
+            expect(thermaltastic['column']).toBe(0);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
                 column: 0,
@@ -1678,13 +1604,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(10);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.feedRows(2);
+            await thermaltastic.feedRows(2);
 
             expect(mockLogger.log).toHaveBeenCalledWith('feedRows called');
 
@@ -1692,8 +1618,8 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(4_200);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
-            expect(thermalMqttastic['column']).toBe(0);
+            expect(thermaltastic['prevByte']).toBe(10);
+            expect(thermaltastic['column']).toBe(0);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
                 column: 0,
@@ -1708,9 +1634,9 @@ describe('ThermalMqttastic', () => {
         it('should validate the rows parameter', async () => {
             expect.assertions(3);
 
-            await expect(thermalMqttastic.feedRows(-1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.feedRows(0)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.feedRows(1.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.feedRows(-1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.feedRows(0)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.feedRows(1.1)).rejects.toThrow(ZodError);
         });
     });
 
@@ -1719,10 +1645,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.flush();
+            await thermaltastic.flush();
 
             expect(mockLogger.log).toHaveBeenCalledWith('flush called');
 
@@ -1738,19 +1664,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const doubleHeightOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOn')
+                .spyOn(thermaltastic as any, 'doubleHeightOn')
                 .mockImplementation(() => {});
             const doubleHeightOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOff')
+                .spyOn(thermaltastic as any, 'doubleHeightOff')
                 .mockImplementation(() => {});
             const doubleWidthOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOn')
+                .spyOn(thermaltastic as any, 'doubleWidthOn')
                 .mockImplementation(() => {});
             const doubleWidthOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOff')
+                .spyOn(thermaltastic as any, 'doubleWidthOff')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setSize();
+            await thermaltastic.setSize();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setSize called');
 
@@ -1765,19 +1691,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const doubleHeightOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOn')
+                .spyOn(thermaltastic as any, 'doubleHeightOn')
                 .mockImplementation(() => {});
             const doubleHeightOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOff')
+                .spyOn(thermaltastic as any, 'doubleHeightOff')
                 .mockImplementation(() => {});
             const doubleWidthOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOn')
+                .spyOn(thermaltastic as any, 'doubleWidthOn')
                 .mockImplementation(() => {});
             const doubleWidthOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOff')
+                .spyOn(thermaltastic as any, 'doubleWidthOff')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setSize('S');
+            await thermaltastic.setSize('S');
 
             expect(mockLogger.log).toHaveBeenCalledWith('setSize called');
 
@@ -1792,19 +1718,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const doubleHeightOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOn')
+                .spyOn(thermaltastic as any, 'doubleHeightOn')
                 .mockImplementation(() => {});
             const doubleHeightOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOff')
+                .spyOn(thermaltastic as any, 'doubleHeightOff')
                 .mockImplementation(() => {});
             const doubleWidthOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOn')
+                .spyOn(thermaltastic as any, 'doubleWidthOn')
                 .mockImplementation(() => {});
             const doubleWidthOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOff')
+                .spyOn(thermaltastic as any, 'doubleWidthOff')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setSize('M');
+            await thermaltastic.setSize('M');
 
             expect(mockLogger.log).toHaveBeenCalledWith('setSize called');
 
@@ -1819,19 +1745,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(6);
 
             const doubleHeightOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOn')
+                .spyOn(thermaltastic as any, 'doubleHeightOn')
                 .mockImplementation(() => {});
             const doubleHeightOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleHeightOff')
+                .spyOn(thermaltastic as any, 'doubleHeightOff')
                 .mockImplementation(() => {});
             const doubleWidthOnSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOn')
+                .spyOn(thermaltastic as any, 'doubleWidthOn')
                 .mockImplementation(() => {});
             const doubleWidthOffSpy = jest
-                .spyOn(thermalMqttastic as any, 'doubleWidthOff')
+                .spyOn(thermaltastic as any, 'doubleWidthOff')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setSize('L');
+            await thermaltastic.setSize('L');
 
             expect(mockLogger.log).toHaveBeenCalledWith('setSize called');
 
@@ -1847,7 +1773,7 @@ describe('ThermalMqttastic', () => {
         it('should throw', async () => {
             expect.assertions(1);
 
-            await expect(thermalMqttastic.setHeatConfig()).rejects.toThrow(Error);
+            await expect(thermaltastic.setHeatConfig()).rejects.toThrow(Error);
         });
     });
 
@@ -1856,10 +1782,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setPrintDensity();
+            await thermaltastic.setPrintDensity();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setPrintDensity called');
 
@@ -1873,10 +1799,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setPrintDensity(12, 3);
+            await thermaltastic.setPrintDensity(12, 3);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setPrintDensity called');
 
@@ -1889,17 +1815,17 @@ describe('ThermalMqttastic', () => {
         it('should validate the density parameter', async () => {
             expect.assertions(3);
 
-            await expect(thermalMqttastic.setPrintDensity(13.1, 2)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setPrintDensity(-13, 2)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setPrintDensity(32, 2)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(13.1, 2)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(-13, 2)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(32, 2)).rejects.toThrow(ZodError);
         });
 
         it('should validate the breakTime parameter', async () => {
             expect.assertions(3);
 
-            await expect(thermalMqttastic.setPrintDensity(10, 2.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setPrintDensity(10, -2)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setPrintDensity(10, 8)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(10, 2.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(10, -2)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setPrintDensity(10, 8)).rejects.toThrow(ZodError);
         });
     });
 
@@ -1908,10 +1834,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.underlineOn();
+            await thermaltastic.underlineOn();
 
             expect(mockLogger.log).toHaveBeenCalledWith('underlineOn called');
 
@@ -1925,10 +1851,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.underlineOn(2);
+            await thermaltastic.underlineOn(2);
 
             expect(mockLogger.log).toHaveBeenCalledWith('underlineOn called');
 
@@ -1944,10 +1870,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.underlineOff();
+            await thermaltastic.underlineOff();
 
             expect(mockLogger.log).toHaveBeenCalledWith('underlineOff called');
 
@@ -1958,7 +1884,6 @@ describe('ThermalMqttastic', () => {
         });
     });
 
-    // TODO: add more tests
     describe('printBitmap', () => {
         let writeBytesSpy: jest.SpyInstance;
         let timeoutWaitSpy: jest.SpyInstance;
@@ -1971,13 +1896,13 @@ describe('ThermalMqttastic', () => {
 
         beforeEach(() => {
             writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             timeoutWaitSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutWait')
+                .spyOn(thermaltastic as any, 'timeoutWait')
                 .mockImplementation(() => {});
             timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
         });
 
@@ -1985,7 +1910,7 @@ describe('ThermalMqttastic', () => {
         it.skip('should print a bitmap', async () => {
             expect.assertions(14);
 
-            await thermalMqttastic.printBitmap(2, 2, new Uint8Array([0, 255, 255, 0]));
+            await thermaltastic.printBitmap(2, 2, new Uint8Array([0, 255, 255, 0]));
 
             expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
 
@@ -1996,7 +1921,7 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(60_000);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(thermaltastic['prevByte']).toBe(10);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
             });
@@ -2011,7 +1936,7 @@ describe('ThermalMqttastic', () => {
         it('should print a bitmap with maximum width and large height', async () => {
             expect.assertions(6_256);
 
-            await thermalMqttastic.printBitmap(
+            await thermaltastic.printBitmap(
                 384,
                 256,
                 new Uint8Array(Array.from({ length: 384 * 256 }, () => 255)),
@@ -2031,7 +1956,7 @@ describe('ThermalMqttastic', () => {
                 expect(timeoutSetSpy).toHaveBeenCalledWith(150_000);
             }
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(thermaltastic['prevByte']).toBe(10);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
             });
@@ -2047,7 +1972,7 @@ describe('ThermalMqttastic', () => {
         it.skip('should print a bitmap with single row', async () => {
             expect.assertions(6);
 
-            await thermalMqttastic.printBitmap(8, 1, new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+            await thermaltastic.printBitmap(8, 1, new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
 
             expect(mockLogger.log).toHaveBeenCalledWith('printBitmap called');
 
@@ -2060,7 +1985,7 @@ describe('ThermalMqttastic', () => {
 
             expect(timeoutSetSpy).toHaveBeenCalledWith(23);
 
-            expect(thermalMqttastic['prevByte']).toBe(10);
+            expect(thermaltastic['prevByte']).toBe(10);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 prevByte: 10,
             });
@@ -2078,10 +2003,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.offline();
+            await thermaltastic.offline();
 
             expect(mockLogger.log).toHaveBeenCalledWith('offline called');
 
@@ -2097,10 +2022,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.online();
+            await thermaltastic.online();
 
             expect(mockLogger.log).toHaveBeenCalledWith('online called');
 
@@ -2116,10 +2041,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const sleepAfterSpy = jest
-                .spyOn(thermalMqttastic as any, 'sleepAfter')
+                .spyOn(thermaltastic as any, 'sleepAfter')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.sleep();
+            await thermaltastic.sleep();
 
             expect(mockLogger.log).toHaveBeenCalledWith('sleep called');
 
@@ -2135,16 +2060,16 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.sleepAfter(1);
+            await thermaltastic.sleepAfter(1);
 
             expect(mockLogger.log).toHaveBeenCalledWith('sleepAfter called');
 
@@ -2158,10 +2083,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.sleepAfter(1);
+            await thermaltastic.sleepAfter(1);
 
             expect(mockLogger.log).toHaveBeenCalledWith('sleepAfter called');
 
@@ -2174,8 +2099,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the seconds parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.sleepAfter(2.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.sleepAfter(0)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.sleepAfter(2.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.sleepAfter(0)).rejects.toThrow(ZodError);
         });
     });
 
@@ -2184,19 +2109,19 @@ describe('ThermalMqttastic', () => {
             expect.assertions(26);
 
             // fake early firmware
-            await thermalMqttastic.begin(12);
+            await thermaltastic.begin(12);
 
             // to not count mock calls during init
             jest.clearAllMocks();
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.wake();
+            await thermaltastic.wake();
 
             expect(mockLogger.log).toHaveBeenCalledWith('wake called');
 
@@ -2218,13 +2143,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(9);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
             const timeoutSetSpy = jest
-                .spyOn(thermalMqttastic as any, 'timeoutSet')
+                .spyOn(thermaltastic as any, 'timeoutSet')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.wake();
+            await thermaltastic.wake();
 
             expect(mockLogger.log).toHaveBeenCalledWith('wake called');
 
@@ -2247,7 +2172,7 @@ describe('ThermalMqttastic', () => {
         it('should throw', async () => {
             expect.assertions(1);
 
-            await expect(thermalMqttastic.hasPaper()).rejects.toThrow(Error);
+            await expect(thermaltastic.hasPaper()).rejects.toThrow(Error);
         });
     });
 
@@ -2256,14 +2181,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setLineHeight();
+            await thermaltastic.setLineHeight();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setLineHeight called');
 
-            expect(thermalMqttastic['lineSpacing']).toBe(6);
+            expect(thermaltastic['lineSpacing']).toBe(6);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 lineSpacing: 6,
             });
@@ -2279,14 +2204,14 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setLineHeight(31);
+            await thermaltastic.setLineHeight(31);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setLineHeight called');
 
-            expect(thermalMqttastic['lineSpacing']).toBe(7);
+            expect(thermaltastic['lineSpacing']).toBe(7);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 lineSpacing: 7,
             });
@@ -2301,8 +2226,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the value parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.setLineHeight(24.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setLineHeight(23)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setLineHeight(24.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setLineHeight(23)).rejects.toThrow(ZodError);
         });
     });
 
@@ -2310,11 +2235,11 @@ describe('ThermalMqttastic', () => {
         it('should set may chunk height default', async () => {
             expect.assertions(5);
 
-            thermalMqttastic.setMaxChunkHeight();
+            thermaltastic.setMaxChunkHeight();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setMaxChunkHeight called');
 
-            expect(thermalMqttastic['maxChunkHeight']).toBe(256);
+            expect(thermaltastic['maxChunkHeight']).toBe(256);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 maxChunkHeight: 256,
             });
@@ -2326,11 +2251,11 @@ describe('ThermalMqttastic', () => {
         it('should set may chunk height', async () => {
             expect.assertions(5);
 
-            thermalMqttastic.setMaxChunkHeight(12);
+            thermaltastic.setMaxChunkHeight(12);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setMaxChunkHeight called');
 
-            expect(thermalMqttastic['maxChunkHeight']).toBe(12);
+            expect(thermaltastic['maxChunkHeight']).toBe(12);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 maxChunkHeight: 12,
             });
@@ -2342,8 +2267,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the value parameter', async () => {
             expect.assertions(2);
 
-            expect(() => thermalMqttastic.setMaxChunkHeight(24.1)).toThrow(ZodError);
-            expect(() => thermalMqttastic.setMaxChunkHeight(0)).toThrow(ZodError);
+            expect(() => thermaltastic.setMaxChunkHeight(24.1)).toThrow(ZodError);
+            expect(() => thermaltastic.setMaxChunkHeight(0)).toThrow(ZodError);
         });
     });
 
@@ -2352,10 +2277,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCharset();
+            await thermaltastic.setCharset();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCharset called');
 
@@ -2369,10 +2294,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCharset(15);
+            await thermaltastic.setCharset(15);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCharset called');
 
@@ -2385,8 +2310,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the value parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.setCharset(10.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setCharset(23)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCharset(10.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCharset(23)).rejects.toThrow(ZodError);
         });
     });
 
@@ -2395,10 +2320,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCodePage();
+            await thermaltastic.setCodePage();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCodePage called');
 
@@ -2412,10 +2337,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCodePage(15);
+            await thermaltastic.setCodePage(15);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCodePage called');
 
@@ -2428,9 +2353,9 @@ describe('ThermalMqttastic', () => {
         it('should validate the value parameter', async () => {
             expect.assertions(3);
 
-            await expect(thermalMqttastic.setCodePage(1.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setCodePage(-1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setCodePage(48)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCodePage(1.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCodePage(-1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCodePage(48)).rejects.toThrow(ZodError);
         });
     });
 
@@ -2439,16 +2364,16 @@ describe('ThermalMqttastic', () => {
             expect.assertions(7);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.tab();
+            await thermaltastic.tab();
 
             expect(mockLogger.log).toHaveBeenCalledWith('tab called');
 
             expect(writeBytesSpy).toHaveBeenCalledWith(9);
 
-            expect(thermalMqttastic['column']).toBe(4);
+            expect(thermaltastic['column']).toBe(4);
             expect(mockLogger.table).toHaveBeenCalledWith({
                 column: 4,
             });
@@ -2464,13 +2389,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setFont();
+            await thermaltastic.setFont();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setFont called');
 
@@ -2484,13 +2409,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setFont('A');
+            await thermaltastic.setFont('A');
 
             expect(mockLogger.log).toHaveBeenCalledWith('setFont called');
 
@@ -2504,13 +2429,13 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const setPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'setPrintMode')
+                .spyOn(thermaltastic as any, 'setPrintMode')
                 .mockImplementation(() => {});
             const unsetPrintModeSpy = jest
-                .spyOn(thermalMqttastic as any, 'unsetPrintMode')
+                .spyOn(thermaltastic as any, 'unsetPrintMode')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setFont('B');
+            await thermaltastic.setFont('B');
 
             expect(mockLogger.log).toHaveBeenCalledWith('setFont called');
 
@@ -2526,10 +2451,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCharSpacing();
+            await thermaltastic.setCharSpacing();
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCharSpacing called');
 
@@ -2543,10 +2468,10 @@ describe('ThermalMqttastic', () => {
             expect.assertions(4);
 
             const writeBytesSpy = jest
-                .spyOn(thermalMqttastic as any, 'writeBytes')
+                .spyOn(thermaltastic as any, 'writeBytes')
                 .mockImplementation(() => {});
 
-            await thermalMqttastic.setCharSpacing(15);
+            await thermaltastic.setCharSpacing(15);
 
             expect(mockLogger.log).toHaveBeenCalledWith('setCharSpacing called');
 
@@ -2559,8 +2484,8 @@ describe('ThermalMqttastic', () => {
         it('should validate the spacing parameter', async () => {
             expect.assertions(2);
 
-            await expect(thermalMqttastic.setCharSpacing(1.1)).rejects.toThrow(ZodError);
-            await expect(thermalMqttastic.setCharSpacing(-1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCharSpacing(1.1)).rejects.toThrow(ZodError);
+            await expect(thermaltastic.setCharSpacing(-1)).rejects.toThrow(ZodError);
         });
     });
 });

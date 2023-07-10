@@ -6,19 +6,19 @@
 <!-- PROJECT HEADER -->
 <br />
 <p align="center">
-  <h3 align="center">ThermalMqttastic</h3>
+  <h3 align="center">Thermaltastic</h3>
 
   <p align="center">
     <img align="center" src="./images/print.jpg" alt="drawing" width="170"/>
     <br />
     <br />
-    Control a Adafruit thermal printer over mqtt. This library is very WIP.
+    Control a Adafruit thermal printer over different adapters. This library is very WIP.
     <br />
     <br />
     ·
-    <a href="https://github.com/beuluis/ThermalMqttastic/issues">Report Bug</a>
+    <a href="https://github.com/beuluis/Thermaltastic/issues">Report Bug</a>
     ·
-    <a href="https://github.com/beuluis/ThermalMqttastic/issues">Request Feature</a>
+    <a href="https://github.com/beuluis/Thermaltastic/issues">Request Feature</a>
     ·
   </p>
 </p>
@@ -31,12 +31,14 @@ I wanted to talk to a thermal printer over an api. I experimented with a esp32 a
 
 After investigating the [Adafruit library](https://github.com/adafruit/Adafruit-Thermal-Printer-Library/tree/master) and many many failed other attempts, I concluded that I can extract the heavy lifting to TypeScript and only run a light mqtt to serial implementation on the esp32.
 
+To allow different 'streams' like mqtt I came up with the adapter concept.
+
 So now you can utilize the versatile package landscape of NPM to generate bitmaps, wrap it in REST APIs and and and.
 
 ## Installation
 
 ```bash
-npm i @beuluis/thermal-mqttastic
+npm i @beuluis/thermaltastic
 ```
 
 ### Unstable installation
@@ -44,31 +46,61 @@ npm i @beuluis/thermal-mqttastic
 The `next` dist-tag is kept in sync with the latest commit on main. So this contains always the latest changes but is highly unstable.
 
 ```bash
-npm i @beuluis/thermal-mqttastic@next
+npm i @beuluis/thermaltastic@next
 ```
 
 ## Usage
 
-> :warning: **You need the corresponding arduino MQTT client also listening**: See [ThermalMqttasticPrinter](https://registry.platformio.org/libraries/beuluis/ThermalMqttasticPrinter) for more details.
-
-You also need a MQTT broker. An example would be [eclipse-mosquitto](https://hub.docker.com/_/eclipse-mosquitto).
-
 ```typescript
-const printer = new ThermalMqttastic({
-    mqttUrl: 'mqtt://localhost:1883',
-    mqttOptions: {
-        password: '12345678',
-    },
-});
+const printer = new Thermaltastic(adapter);
 
 await printer.begin();
 
 await printer.println('Hello World!');
 ```
 
-### MQTT connection
+## Adapters
+
+The original library used a serial stream to send the bytes to the printer. In this implementation we use adapters to achieve this.
+
+A adapter defines how the printer receives the bytes.
+
+### MqttasticAdapter
+
+Send the to print bytes over mqtt.
+
+> :warning: **You need the corresponding arduino MQTT client also listening**: See [ThermalMqttasticPrinter](https://registry.platformio.org/libraries/beuluis/ThermalMqttasticPrinter) for more details.
+
+You also need a MQTT broker. An example would be [eclipse-mosquitto](https://hub.docker.com/_/eclipse-mosquitto).
+
+```typescript
+const adapter = new MqttasticAdapter({
+    mqttUrl: 'mqtt://localhost:1883',
+    mqttOptions: {
+        password: '12345678',
+    },
+});
+
+new Thermaltastic(adapter);
+```
+
+#### MQTT connection
 
 `mqttOptions` is the option interface of the [MQTT](https://www.npmjs.com/package/mqtt) package. Please refer to this documentation on how to establish the connection.
+
+### Implement your own adapter
+
+For your own adapter you just need to implement the `Adapter` interface.
+
+```typescript
+export class MyAdapter implements Adapter {
+    public async begin() {}
+
+    public async write(...bytes: [number, number?, number?, number?]) {}
+
+    public async writeBytes(...bytes: [number, number?, number?, number?]) {}
+}
+```
 
 ## Functions
 
@@ -566,11 +598,7 @@ await printer.setCharSpacing(10);
 You can enable the debugging logger when you provide a logger to the constructor.
 
 ```typescript
-const printer = new ThermalMqttastic({
-    mqttUrl: 'mqtt://localhost:1883',
-    mqttOptions: {
-        password: '12345678',
-    },
+const printer = new Thermaltastic(adapter, {
     logger: console,
 });
 ```
@@ -596,12 +624,12 @@ Luis Beu - me@luisbeu.de
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/beuluis/ThermalMqttastic.svg?style=flat-square
-[contributors-url]: https://github.com/beuluis/ThermalMqttastic/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/beuluis/ThermalMqttastic.svg?style=flat-square
-[forks-url]: https://github.com/beuluis/ThermalMqttastic/network/members
-[stars-shield]: https://img.shields.io/github/stars/beuluis/ThermalMqttastic.svg?style=flat-square
-[stars-url]: https://github.com/beuluis/ThermalMqttastic/stargazers
-[issues-shield]: https://img.shields.io/github/issues/beuluis/ThermalMqttastic.svg?style=flat-square
-[issues-url]: https://github.com/beuluis/ThermalMqttastic/issues
-[license-shield]: https://img.shields.io/github/license/beuluis/ThermalMqttastic.svg?style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/beuluis/Thermaltastic.svg?style=flat-square
+[contributors-url]: https://github.com/beuluis/Thermaltastic/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/beuluis/Thermaltastic.svg?style=flat-square
+[forks-url]: https://github.com/beuluis/Thermaltastic/network/members
+[stars-shield]: https://img.shields.io/github/stars/beuluis/Thermaltastic.svg?style=flat-square
+[stars-url]: https://github.com/beuluis/Thermaltastic/stargazers
+[issues-shield]: https://img.shields.io/github/issues/beuluis/Thermaltastic.svg?style=flat-square
+[issues-url]: https://github.com/beuluis/Thermaltastic/issues
+[license-shield]: https://img.shields.io/github/license/beuluis/Thermaltastic.svg?style=flat-square

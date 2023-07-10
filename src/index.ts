@@ -1,2 +1,3 @@
-export * from './ThermalMqttastic';
+export * from './adapters';
+export * from './Thermaltastic';
 export * from './enums';

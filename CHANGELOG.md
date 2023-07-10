@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023-07-10 - 0.1.0
+
+-   Add adapter concept
+-   rename from `@beuluis/thermal-mqttastic` to `@beuluis/thermaltastic`
+
 ## 2023-07-10 - 0.0.3
 
 -   Update readme
