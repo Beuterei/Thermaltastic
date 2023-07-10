@@ -27,8 +27,6 @@
  * MIT license, all text above must be included in any redistribution.
  */
 
-import type { IClientOptions, AsyncMqttClient } from 'async-mqtt';
-import { connectAsync } from 'async-mqtt';
 import { z } from 'zod';
 import type { Barcode } from './enums';
 import { AsciiCode, CharacterCommands } from './enums';
@@ -60,7 +58,12 @@ const BAUDRATE = 19_200; // How many bits per second the serial port should tran
 const BYTE_TIME = Math.ceil((11 * 1_000_000 + BAUDRATE / 2) / BAUDRATE);
 
 // TODO: add multi client support with start/stop
-// TODO: Extract MQTT connector and write class interface that can be used
+export interface Adapter {
+    begin: () => Promise<void>;
+    write: (...bytes: [number, number?, number?, number?]) => Promise<void>;
+    writeBytes: (...bytes: [number, number?, number?, number?]) => Promise<void>;
+}
+
 export interface Logger {
     log?: (message: string) => void;
     table?: (table: object) => void;
@@ -69,11 +72,9 @@ export interface Logger {
 export interface InitOptions {
     additionalStackTimeout?: number;
     logger?: Logger;
-    mqttOptions?: IClientOptions;
-    mqttUrl: string;
 }
 
-export class ThermalMqttastic {
+export class Thermaltastic {
     protected resumeTime = 0;
 
     protected prevByte = 0;
@@ -99,22 +100,17 @@ export class ThermalMqttastic {
     protected printMode = 0;
 
     // Added class properties
-    protected mqttClient?: AsyncMqttClient;
-
-    protected mqttUrl: string;
-
-    protected mqttOptions?: IClientOptions;
+    protected adapter: Adapter;
 
     protected logger?: Logger;
 
     protected additionalStackTimeout: number;
 
     // Constructor
-    public constructor(initOptions: InitOptions) {
-        this.additionalStackTimeout = initOptions.additionalStackTimeout ?? 5;
-        this.logger = initOptions.logger;
-        this.mqttUrl = initOptions.mqttUrl;
-        this.mqttOptions = initOptions.mqttOptions;
+    public constructor(adapter: Adapter, initOptions?: InitOptions) {
+        this.adapter = adapter;
+        this.additionalStackTimeout = initOptions?.additionalStackTimeout ?? 5;
+        this.logger = initOptions?.logger;
     }
 
     // Additional functions
@@ -134,14 +130,6 @@ export class ThermalMqttastic {
     protected getByteTime(modifier = 1) {
         // additionalStackTimeout only gets added the modifier only effects the original BYTE_TIME
         return BYTE_TIME * modifier + this.additionalStackTimeout * 1_000_000; // additionalStackTimeout is in ms so we convert it to nanoseconds
-    }
-
-    protected async publish(topic: string, payload: string) {
-        if (!this.mqttClient) {
-            throw new Error('MQTT client is not initialized. Did you call begin()?');
-        }
-
-        await this.mqttClient.publish(topic, payload, { qos: 2 });
     }
     // Additional functions end
 
@@ -204,11 +192,9 @@ export class ThermalMqttastic {
     protected async writeBytes(...bytes: [number, number?, number?, number?]) {
         this.mayLog('writeBytes called');
 
-        const payloadString = bytes.join(',');
-
         await this.timeoutWait();
-        await this.publish('writeBytes', payloadString);
-        this.mayLog(`Written ${payloadString} to stream (writeBytes)`);
+        await this.adapter.writeBytes(...bytes);
+        this.mayLog(`Written ${bytes.join(',')} to stream (writeBytes)`);
 
         this.timeoutSet(this.getByteTime(bytes.length));
     }
@@ -249,12 +235,11 @@ export class ThermalMqttastic {
         let temporaryByteTime = 0;
 
         const sendPayload = async () => {
-            const payloadString = payload.join(',');
-
             await this.timeoutWait();
-            await this.publish('write', payloadString);
+            const [first, ...rest] = payload;
+            await this.adapter.writeBytes(first, ...rest);
 
-            this.mayLog(`Written ${payloadString} to stream (write)`);
+            this.mayLog(`Written ${payload.join(',')} to stream (write)`);
 
             this.timeoutSet(this.getByteTime(payload.length) + temporaryByteTime);
 
@@ -319,9 +304,9 @@ export class ThermalMqttastic {
         z.number().int().nonnegative().parse(firmware);
 
         // Wait for mqtt connection
-        this.mayLog('Connecting to MQTT');
-        this.mqttClient = await connectAsync(this.mqttUrl, this.mqttOptions);
-        this.mayLog('MQTT connection successful');
+        this.mayLog('Begin adapter');
+        await this.adapter.begin();
+        this.mayLog('Begin adapter successful');
 
         this.firmware = firmware;
         this.mayTable({ firmware });
@@ -329,7 +314,7 @@ export class ThermalMqttastic {
         // The printer can't start receiving data immediately upon power up --
         // it needs a moment to cold boot and initialize.  Allow at least 2
         // sec of uptime before printer can receive data.
-        // TODO: replace with ready mqtt communication
+        // TODO: replace with ready communication
         this.timeoutSet(2_000_000);
 
         await this.wake();
