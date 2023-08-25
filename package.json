@@ -50,7 +50,7 @@
     "@beuluis/hook-cli": "1.2.1",
     "@beuluis/prettier-config": "2.0.2",
     "@types/jest": "29.5.2",
-    "@types/node": "20.3.1",
+    "@types/node": "20.5.6",
     "@types/qrcode": "1.5.0",
     "eslint": "8.39.0",
     "husky": "8.0.3",
