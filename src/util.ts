@@ -12,6 +12,7 @@ export const C = (char: string) => {
 };
 
 export const delay = async (ms: number) =>
+    // eslint-disable-next-line no-return-await
     await new Promise(resolve => {
         setTimeout(resolve, ms);
     });

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/dot-notation */
-import { connectAsync, type AsyncMqttClient } from 'async-mqtt';
-import { mock } from 'jest-mock-extended';
 import { MqttasticAdapter } from '../../src';
+import { type AsyncMqttClient, connectAsync } from 'async-mqtt';
+import { mock } from 'jest-mock-extended';
 
 jest.mock('async-mqtt', () => ({
     connectAsync: jest.fn(() => mock<AsyncMqttClient>()),
@@ -55,12 +55,14 @@ describe('MqttasticAdapter', () => {
 
             await mqttasticAdapter['publish']('test', 'payload');
 
+            // eslint-disable-next-line jest/unbound-method
             expect(mqttasticAdapter['mqttClient']?.publish).toHaveBeenCalledWith(
                 'test',
                 'payload',
                 { qos: 2 },
             );
 
+            // eslint-disable-next-line jest/unbound-method
             expect(mqttasticAdapter['mqttClient']?.publish).toHaveBeenCalledTimes(1);
         });
 

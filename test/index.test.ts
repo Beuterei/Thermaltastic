@@ -1,7 +1,7 @@
 import * as index from '../src';
-import { Thermaltastic } from '../src/Thermaltastic';
 import { MqttasticAdapter } from '../src/adapters/MqttasticAdapter';
-import { CharacterSet, CodePage, Barcode, AsciiCode, CharacterCommands } from '../src/enums';
+import { AsciiCode, Barcode, CharacterCommands, CharacterSet, CodePage } from '../src/enums';
+import { Thermaltastic } from '../src/Thermaltastic';
 
 describe('export', () => {
     it('should be exported', () => {

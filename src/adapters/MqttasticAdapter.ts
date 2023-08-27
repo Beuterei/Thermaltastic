@@ -1,7 +1,7 @@
 /* eslint-disable canonical/filename-match-regex */
+import type { Adapter } from '../Thermaltastic';
 import type { AsyncMqttClient, IClientOptions } from 'async-mqtt';
 import { connectAsync } from 'async-mqtt';
-import type { Adapter } from '../Thermaltastic';
 
 export interface MqttasticAdapterInitOptions {
     mqttOptions?: IClientOptions;

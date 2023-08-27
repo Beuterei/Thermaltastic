@@ -27,10 +27,10 @@
  * MIT license, all text above must be included in any redistribution.
  */
 
-import { z } from 'zod';
 import type { Barcode } from './enums';
 import { AsciiCode, CharacterCommands } from './enums';
 import { C, delay } from './util';
+import { z } from 'zod';
 
 // Though most of these printers are factory configured for 19200 baud
 // operation, a few rare specimens instead work at 9600.  If so, change
@@ -816,9 +816,11 @@ export class Thermaltastic {
 
             await this.writeBytes(AsciiCode.DC2, C('*'), chunkHeight, rowBytesClipped);
 
+            // eslint-disable-next-line id-length
             for (let y = 0; y < chunkHeight; y++) {
                 let payload: number[] = [];
 
+                // eslint-disable-next-line id-length
                 for (let x = 0; x < rowBytesClipped; x++, index++) {
                     payload.push(bitmap[index]);
 

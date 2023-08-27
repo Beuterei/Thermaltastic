@@ -3,11 +3,11 @@
 /* eslint-disable id-length */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/dot-notation */
-import { mock } from 'jest-mock-extended';
-import { ZodError } from 'zod';
 import type { Adapter } from '../src';
 import { Thermaltastic } from '../src';
 import { delay } from '../src/util';
+import { mock } from 'jest-mock-extended';
+import { ZodError } from 'zod';
 
 jest.mock('../src/util', () => ({
     delay: jest.fn(),
