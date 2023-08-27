@@ -11,7 +11,6 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "lint": "eslint .",
-    "format": "prettier . --check",
     "prepack": "npm run build",
     "build": "tsc --project tsconfig.build.json",
     "prepare": "husky install"
@@ -21,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/beuluis/Thermaltastic.git"
+    "url": "git+https://github.com/Beuterei/Thermaltastic.git"
   },
   "keywords": [
     "thermal",
@@ -32,23 +31,17 @@
   "author": "Luis Beu <me@luisbeu.de> (https://luisbeu.de/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/beuluis/Thermaltastic/issues"
+    "url": "https://github.com/Beuterei/Thermaltastic/issues"
   },
-  "homepage": "https://github.com/beuluis/Thermaltastic#readme",
-  "prettier": "@beuluis/prettier-config",
+  "homepage": "https://github.com/Beuterei/Thermaltastic#readme",
   "lint-staged": {
-    "*.md": [
-      "prettier --write"
-    ],
     "*.{js,ts,json,yml,yaml}": [
-      "prettier --write",
       "eslint"
     ]
   },
   "devDependencies": {
-    "@beuluis/eslint-config": "1.2.3",
+    "@beuluis/eslint-config": "2.0.0",
     "@beuluis/hook-cli": "1.2.1",
-    "@beuluis/prettier-config": "2.0.2",
     "@types/jest": "29.5.2",
     "@types/node": "20.3.1",
     "@types/qrcode": "1.5.0",

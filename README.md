@@ -16,9 +16,9 @@
     <br />
     <br />
     ·
-    <a href="https://github.com/beuluis/Thermaltastic/issues">Report Bug</a>
+    <a href="https://github.com/Beuterei/Thermaltastic/issues">Report Bug</a>
     ·
-    <a href="https://github.com/beuluis/Thermaltastic/issues">Request Feature</a>
+    <a href="https://github.com/Beuterei/Thermaltastic/issues">Request Feature</a>
     ·
   </p>
 </p>
@@ -624,12 +624,12 @@ Luis Beu - me@luisbeu.de
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/beuluis/Thermaltastic.svg?style=flat-square
-[contributors-url]: https://github.com/beuluis/Thermaltastic/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/beuluis/Thermaltastic.svg?style=flat-square
-[forks-url]: https://github.com/beuluis/Thermaltastic/network/members
-[stars-shield]: https://img.shields.io/github/stars/beuluis/Thermaltastic.svg?style=flat-square
-[stars-url]: https://github.com/beuluis/Thermaltastic/stargazers
-[issues-shield]: https://img.shields.io/github/issues/beuluis/Thermaltastic.svg?style=flat-square
-[issues-url]: https://github.com/beuluis/Thermaltastic/issues
-[license-shield]: https://img.shields.io/github/license/beuluis/Thermaltastic.svg?style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/Beuterei/Thermaltastic.svg?style=flat-square
+[contributors-url]: https://github.com/Beuterei/Thermaltastic/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Beuterei/Thermaltastic.svg?style=flat-square
+[forks-url]: https://github.com/Beuterei/Thermaltastic/network/members
+[stars-shield]: https://img.shields.io/github/stars/Beuterei/Thermaltastic.svg?style=flat-square
+[stars-url]: https://github.com/Beuterei/Thermaltastic/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Beuterei/Thermaltastic.svg?style=flat-square
+[issues-url]: https://github.com/Beuterei/Thermaltastic/issues
+[license-shield]: https://img.shields.io/github/license/Beuterei/Thermaltastic.svg?style=flat-square
