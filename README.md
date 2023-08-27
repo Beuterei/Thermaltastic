@@ -603,12 +603,6 @@ const printer = new Thermaltastic(adapter, {
 });
 ```
 
-<!-- CONTRIBUTING -->
-
-## Contributing
-
-Follow [contributing](https://github.com/Good-Games-Munich/.github/wiki/workflows#contributing).
-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
